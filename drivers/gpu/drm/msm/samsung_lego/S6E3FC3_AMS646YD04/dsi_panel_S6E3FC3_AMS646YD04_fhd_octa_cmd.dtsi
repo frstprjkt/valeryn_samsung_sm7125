@@ -1390,7 +1390,7 @@
 		*/
 
 		qcom,mdss-dsi-display-timings {
-			fhd90 {
+			fhd90phs {
 				qcom,display-topology = <1 0 1>;
 				qcom,default-topology-index = <0>;
 
@@ -1500,7 +1500,7 @@
 				qcom,panel-roi-alignment=<360 120 360 120 360 120>;
 			};
 
-			fhd60 {
+			fhd60phs {
 				qcom,display-topology = <1 0 1>;
 				qcom,default-topology-index = <0>;
 
