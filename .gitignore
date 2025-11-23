@@ -133,3 +133,10 @@ build.sh
 regen.sh
 out
 a52q*.zip
+
+# Useless patching files
+*.orig
+*.rej
+
+# SUSFS folder
+susfs4ksu/
