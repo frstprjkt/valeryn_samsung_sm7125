@@ -66,6 +66,9 @@ enum scan_result {
 #define CREATE_TRACE_POINTS
 #include <trace/events/huge_memory.h>
 
+static struct task_struct *khugepaged_thread __read_mostly;
+static DEFINE_MUTEX(khugepaged_mutex);
+
 /* default scan 8*512 pte (or vmas) every 30 second */
 static unsigned int khugepaged_pages_to_scan __read_mostly;
 static unsigned int khugepaged_pages_collapsed;
@@ -1309,12 +1312,14 @@ static void retract_page_tables(struct address_space *mapping, pgoff_t pgoff)
 				spinlock_t *ptl;
 				unsigned long end = addr + HPAGE_PMD_SIZE;
 
+				vm_write_begin(vma);
 				mmu_notifier_invalidate_range_start(mm, addr,
 								    end);
 				ptl = pmd_lock(mm, pmd);
 				/* assume page table is clear */
 				_pmd = pmdp_collapse_flush(vma, addr, pmd);
 				spin_unlock(ptl);
+				vm_write_end(vma);
 				mm_dec_nr_ptes(vma->vm_mm);
 				atomic_long_dec(&mm->nr_ptes);
 				tlb_remove_table_sync_one();
@@ -2011,4 +2016,3 @@ void khugepaged_min_free_kbytes_update(void)
 		set_recommended_min_free_kbytes();
 	mutex_unlock(&khugepaged_mutex);
 }
-

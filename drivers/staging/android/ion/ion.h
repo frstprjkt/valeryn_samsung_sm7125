@@ -386,9 +386,6 @@ size_t ion_heap_freelist_size(struct ion_heap *heap);
 struct ion_heap *ion_heap_create(struct ion_platform_heap *heap_data);
 
 struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused);
-#ifdef CONFIG_ION_RBIN_HEAP
-struct ion_heap *ion_rbin_heap_create(struct ion_platform_heap *unused);
-#endif
 struct ion_heap *ion_system_contig_heap_create(struct ion_platform_heap *heap);
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data);

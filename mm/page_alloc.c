@@ -68,8 +68,8 @@
 #include <linux/ftrace.h>
 #include <linux/lockdep.h>
 #include <linux/nmi.h>
+#include <linux/khugepaged.h>
 #include <linux/psi.h>
-#include <linux/sched/cputime.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -3196,15 +3196,11 @@ static inline bool zone_watermark_fast(struct zone *z, unsigned int order,
 	 * need to be calculated.
 	 */
 	if (!order) {
-		long usable_free;
-		long reserved;
+		long fast_free;
 
-		usable_free = free_pages;
-		reserved = __zone_watermark_unusable_free(z, 0, alloc_flags);
-
-		/* reserved may over estimate high-atomic reserves. */
-		usable_free -= min(usable_free, reserved);
-		if (usable_free > mark + z->lowmem_reserve[classzone_idx])
+		fast_free = free_pages;
+		fast_free -= __zone_watermark_unusable_free(z, 0, alloc_flags);
+		if (fast_free > mark + z->lowmem_reserve[classzone_idx])
 			return true;
 	}
 
@@ -3399,8 +3395,7 @@ void warn_alloc(gfp_t gfp_mask, nodemask_t *nodemask, const char *fmt, ...)
 	pr_cont("%pV", &vaf);
 	va_end(args);
 
-	pr_cont(", mode:%#x(%pGg), fatal_signal:%d, nodemask=", gfp_mask,
-		&gfp_mask, fatal_signal_pending(current) ? 1 : 0);
+	pr_cont(", mode:%#x(%pGg), nodemask=", gfp_mask, &gfp_mask);
 	if (nodemask)
 		pr_cont("%*pbl\n", nodemask_pr_args(nodemask));
 	else
@@ -3542,8 +3537,10 @@ __alloc_pages_direct_compact(gfp_t gfp_mask, unsigned int order,
 
 	psi_memstall_enter(&pflags);
 	noreclaim_flag = memalloc_noreclaim_save();
+
 	*compact_result = try_to_compact_pages(gfp_mask, order, alloc_flags, ac,
 									prio);
+
 	memalloc_noreclaim_restore(noreclaim_flag);
 	psi_memstall_leave(&pflags);
 
@@ -3849,8 +3846,7 @@ retry:
 	 */
 	if (!page && !drained) {
 		unreserve_highatomic_pageblock(ac, false);
-		if (!need_memory_boosting(NULL))
-			drain_all_pages(NULL);
+		drain_all_pages(NULL);
 		drained = true;
 		goto retry;
 	}
@@ -4101,7 +4097,7 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	const bool costly_order = order > PAGE_ALLOC_COSTLY_ORDER;
 	struct page *page = NULL;
 	unsigned int alloc_flags;
-	unsigned long did_some_progress = 0;
+	unsigned long did_some_progress;
 	enum compact_priority compact_priority;
 	enum compact_result compact_result;
 	int compaction_retries;
@@ -4109,12 +4105,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	unsigned int cpuset_mems_cookie;
 	unsigned int zonelist_iter_cookie;
 	int reserve_flags;
-	unsigned long pages_reclaimed = 0;
-	int retry_loop_count = 0;
-	unsigned long jiffies_s = jiffies;
-	u64 utime, stime_s, stime_e, stime_d;
-
-	task_cputime(current, &utime, &stime_s);
 
 	/*
 	 * We also sanity check to catch abuse of atomic reserves being used by
@@ -4206,7 +4196,6 @@ restart:
 	}
 
 retry:
-	retry_loop_count++;
 	/* Ensure kswapd doesn't accidentally go to sleep as long as we loop */
 	if (gfp_mask & __GFP_KSWAPD_RECLAIM)
 		wake_all_kswapds(order, ac);
@@ -4245,7 +4234,6 @@ retry:
 	/* Try direct reclaim and then allocating */
 	page = __alloc_pages_direct_reclaim(gfp_mask, order, alloc_flags, ac,
 							&did_some_progress);
-	pages_reclaimed += did_some_progress;
 	if (page)
 		goto got_pg;
 
@@ -4362,29 +4350,6 @@ fail:
 	warn_alloc(gfp_mask, ac->nodemask,
 			"page allocation failure: order:%u", order);
 got_pg:
-	task_cputime(current, &utime, &stime_e);
-	stime_d = stime_e - stime_s;
-	if (stime_d / NSEC_PER_MSEC > 256) {
-		pg_data_t *pgdat;
-
-		unsigned long a_anon = 0;
-		unsigned long in_anon = 0;
-		unsigned long a_file = 0;
-		unsigned long in_file = 0;
-		for_each_online_pgdat(pgdat) {
-			a_anon += node_page_state(pgdat, NR_ACTIVE_ANON);
-			in_anon += node_page_state(pgdat, NR_INACTIVE_ANON);
-			a_file += node_page_state(pgdat, NR_ACTIVE_FILE);
-			in_file += node_page_state(pgdat, NR_INACTIVE_FILE);
-		}
-		pr_info("alloc stall: timeJS(ms):%u|%u rec:%lu|%lu ret:%d o:%d gfp:%#x(%pGg) AaiFai:%lukB|%lukB|%lukB|%lukB\n",
-			jiffies_to_msecs(jiffies - jiffies_s),
-			stime_d / NSEC_PER_MSEC,
-			did_some_progress, pages_reclaimed, retry_loop_count,
-			order, gfp_mask, &gfp_mask,
-			a_anon << (PAGE_SHIFT-10), in_anon << (PAGE_SHIFT-10),
-			a_file << (PAGE_SHIFT-10), in_file << (PAGE_SHIFT-10));
-	}
 	return page;
 }
 
@@ -4849,9 +4814,7 @@ long si_mem_available(void)
 	reclaimable = global_node_page_state(NR_SLAB_RECLAIMABLE) +
 			global_node_page_state(NR_KERNEL_MISC_RECLAIMABLE);
 	available += reclaimable - min(reclaimable / 2, wmark_low);
-#ifdef CONFIG_ION_RBIN_HEAP
-	available += atomic_read(&rbin_cached_pages);
-#endif
+
 	if (available < 0)
 		available = 0;
 	return available;
@@ -4861,9 +4824,6 @@ EXPORT_SYMBOL_GPL(si_mem_available);
 void si_meminfo(struct sysinfo *val)
 {
 	val->totalram = totalram_pages;
-#ifdef CONFIG_ION_RBIN_HEAP
-	val->totalram += totalrbin_pages;
-#endif
 	val->sharedram = global_node_page_state(NR_SHMEM);
 	val->freeram = global_zone_page_state(NR_FREE_PAGES);
 	val->bufferram = nr_blockdev_pages();
@@ -7031,7 +6991,6 @@ unsigned long free_reserved_area(void *start, void *end, int poison, char *s)
 	void *pos;
 	unsigned long pages = 0;
 
-	free_memsize_reserved(__pa(start), end - start);
 	start = (void *)PAGE_ALIGN((unsigned long)start);
 	end = (void *)((unsigned long)end & PAGE_MASK);
 	for (pos = start; pos < end; pos += PAGE_SIZE, pages++) {
@@ -7383,6 +7342,8 @@ int __meminit init_per_zone_wmark_min(void)
 	setup_min_unmapped_ratio();
 	setup_min_slab_ratio();
 #endif
+
+	khugepaged_min_free_kbytes_update();
 
 	return 0;
 }

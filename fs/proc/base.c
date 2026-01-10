@@ -1070,11 +1070,9 @@ static unsigned long period_max_cnt;
 
 static int __set_oom_adj(struct file *file, int oom_adj, bool legacy)
 {
-	static DEFINE_MUTEX(oom_adj_mutex);
 	struct mm_struct *mm = NULL;
 	struct task_struct *task;
 	int err = 0;
-	int mm_users;
 
 #if DEBUG_SET_OOM_ADJ_TIME
 	unsigned long start_set_oom_adj = jiffies;
@@ -1128,8 +1126,7 @@ static int __set_oom_adj(struct file *file, int oom_adj, bool legacy)
 		struct task_struct *p = find_lock_task_mm(task);
 
 		if (p) {
-			mm_users = atomic_read(&p->mm->mm_users);
-			if (mm_users > 1 && mm_users > get_nr_threads(p)) {
+			if (test_bit(MMF_MULTIPROCESS, &p->mm->flags)) {
 				mm = p->mm;
 				mmgrab(mm);
 			}
@@ -3670,7 +3667,6 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("cmdline",    S_IRUGO, proc_pid_cmdline_ops),
 	ONE("stat",       S_IRUGO, proc_tgid_stat),
 	ONE("statm",      S_IRUGO, proc_pid_statm),
-	ONE("statlmkd",      S_IRUGO, proc_pid_statlmkd),
 	REG("maps",       S_IRUGO, proc_pid_maps_operations),
 #ifdef CONFIG_PAGE_BOOST
 	REG("filemap_list",       S_IRUGO, proc_pid_filemap_list_operations),
@@ -4098,7 +4094,6 @@ static const struct pid_entry tid_base_stuff[] = {
 	REG("cmdline",   S_IRUGO, proc_pid_cmdline_ops),
 	ONE("stat",      S_IRUGO, proc_tid_stat),
 	ONE("statm",     S_IRUGO, proc_pid_statm),
-	ONE("statlmkd",      S_IRUGO, proc_pid_statlmkd),
 	REG("maps",      S_IRUGO, proc_tid_maps_operations),
 #ifdef CONFIG_PROC_CHILDREN
 	REG("children",  S_IRUGO, proc_tid_children_operations),

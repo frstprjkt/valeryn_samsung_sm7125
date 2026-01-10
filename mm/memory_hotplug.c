@@ -37,7 +37,6 @@
 #include <linux/compaction.h>
 #include <linux/device.h>
 #include <linux/rmap.h>
-#include <linux/khugepaged.h>
 
 #include <asm/tlbflush.h>
 
@@ -969,7 +968,6 @@ int __ref online_pages(unsigned long pfn, unsigned long nr_pages, int online_typ
 	}
 
 	init_per_zone_wmark_min();
-        khugepaged_min_free_kbytes_update();
 
 	if (onlined_pages) {
 		kswapd_run(nid);
@@ -1772,7 +1770,6 @@ repeat:
 	pgdat_resize_unlock(zone->zone_pgdat, &flags);
 
 	init_per_zone_wmark_min();
-	khugepaged_min_free_kbytes_update();
 
 	if (!populated_zone(zone)) {
 		zone_pcp_reset(zone);

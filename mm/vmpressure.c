@@ -263,7 +263,6 @@ static void vmpressure_work_fn(struct work_struct *work)
 
 	pressure = vmpressure_calc_pressure(scanned, reclaimed);
 	level = vmpressure_level(pressure);
-	vmpr->pressure = pressure;
 
 	do {
 		if (vmpressure_event(vmpr, level, ancestor, signalled))

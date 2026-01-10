@@ -722,7 +722,7 @@ struct mem_cgroup *mem_cgroup_iter(struct mem_cgroup *root,
 				   struct mem_cgroup *prev,
 				   struct mem_cgroup_reclaim_cookie *reclaim)
 {
-	struct mem_cgroup_reclaim_iter *uninitialized_var(iter);
+	struct mem_cgroup_reclaim_iter *iter;
 	struct cgroup_subsys_state *css = NULL;
 	struct mem_cgroup *memcg = NULL;
 	struct mem_cgroup *pos = NULL;
@@ -3342,17 +3342,7 @@ static int memcg_stat_show(struct seq_file *m, void *v)
 
 	return 0;
 }
-static u64 mem_cgroup_vmpressure_read(struct cgroup_subsys_state *css,
-				      struct cftype *cft)
-{
-	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
-	struct vmpressure *vmpr = memcg_to_vmpressure(memcg);
-	unsigned long vmpressure;
 
-	vmpressure = vmpr->pressure;
-
-	return vmpressure;
-}
 static u64 mem_cgroup_swappiness_read(struct cgroup_subsys_state *css,
 				      struct cftype *cft)
 {
@@ -4141,10 +4131,6 @@ static struct cftype mem_cgroup_legacy_files[] = {
 	},
 	{
 		.name = "pressure_level",
-	},
-	{
-		.name = "vmpressure",
-		.read_u64 = mem_cgroup_vmpressure_read,
 	},
 #ifdef CONFIG_NUMA
 	{

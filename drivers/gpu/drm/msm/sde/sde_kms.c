@@ -862,7 +862,6 @@ static int _sde_kms_release_splash_buffer(unsigned int mem_addr,
 		SDE_ERROR("continuous splash memory free failed:%d\n", ret);
 		return ret;
 	}
-	free_memsize_reserved(mem_addr, splash_buffer_size);
 	for (pfn_idx = pfn_start; pfn_idx < pfn_end; pfn_idx++)
 		free_reserved_page(pfn_to_page(pfn_idx));
 
