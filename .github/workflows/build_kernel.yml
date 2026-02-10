@@ -1,0 +1,123 @@
+name: Build Valeryn kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Upload release'
+        type: boolean
+        required: true
+        default: false
+      changelog:
+        description: 'Changelog'
+        type: string
+        required: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      release_ts: ${{ steps.ts.outputs.release_ts }}
+
+    steps:
+      - id: ts
+        run: |
+          echo "release_ts=$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [a52q, a72q]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+          fetch-depth: 1
+
+      - name: Install build tools
+        run: |
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            curl \
+            unzip \
+            wget \
+            zip \
+            zstd
+
+      - name: Download prebuilt Google clang
+        run: |
+          wget -O llvm-aosp.tar.gz https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/mirror-goog-main-llvm-toolchain-source/clang-r596125.tar.gz
+          mkdir llvm-aosp; cd llvm-aosp
+          tar -xzf ../llvm-aosp.tar.gz
+          rm ../llvm-aosp.tar.gz
+          cd ..
+
+      - name: Download mkbootimg repo from AOSP
+        run: |
+          git clone --depth=1 https://android.googlesource.com/platform/system/tools/mkbootimg
+
+      - name: Download stock ramdisk for boot image creation
+        run: |
+          git clone --depth=1 https://github.com/frstprjkt/boot_samsung_sm7125 -b ramdisk boot
+
+      - name: Build kernel
+        run: |
+          chmod +x build.sh
+          bash build.sh ${{ matrix.target }}
+          cp out/include/config/kernel.release kernel.release-${{ matrix.target }}
+
+      - name: Upload build artifact
+        if: github.event.inputs.release
+        uses: actions/upload-artifact@v7
+        with:
+          name: kernel-${{ matrix.target }}
+          path: |
+            boot-${{ matrix.target }}.img
+            dtbo-${{ matrix.target }}.img
+            kernel.release-${{ matrix.target }}
+
+  release:
+    if: github.event.inputs.release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: kernel-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Verify artifacts
+        run: |
+          find artifacts -type f
+
+      - name: Generate release version
+        run: |
+          : > version.txt
+          echo "**Kernel version:** $(cat artifacts/kernel.release-a52q)  " >> version.txt
+          echo >> version.txt
+          echo "**Kernel source:** [${{ github.sha }}](https://github.com/frstprjkt/valeryn_samsung_sm7125/tree/${{ github.sha }})" >> version.txt
+
+          if [ -n "${{ github.event.inputs.changelog }}" ]; then
+            echo >> version.txt
+            echo "**Changelog:**" >> version.txt
+            echo >> version.txt
+            printf "%b\n" "${{ github.event.inputs.changelog }}" >> version.txt
+          fi
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          body_path: version.txt
+          tag_name: "${{ needs.prepare.outputs.release_ts }}"
+          name: "ValerynKernel-${{ needs.prepare.outputs.release_ts }}"
+          files: artifacts/*.img
