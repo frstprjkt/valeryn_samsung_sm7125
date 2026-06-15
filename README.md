@@ -1,7 +1,7 @@
 # Galaxy Tab S6 Lite 2022 Kernel
 
 > [!NOTE]
-> I'm not the original author of this nor I made the BPF backports. This A52 kernel's maintainer was [Simon1511](https://github.com/Simon1511) previously, and later [frostg-012](https://github.com/frostg-012), I just added defconfig entries in order to make it compatible with the Tab S6 Lite 2022. Workflow was taken from [the LineageOS KernelSU Next kernel](https://github.com/IamKavy47/gta4xlve_kernel-ksun) by [IamKavy47](https://github.com/IamKavy47)
+> I'm not the original author of this nor I made the BPF backports. This A52 kernel's maintainer was [Simon1511](https://github.com/Simon1511) previously, and later [frostg-012](https://github.com/frostg-012), I just added defconfig entries in order to make it compatible with the Tab S6 Lite 2022. Workflow was taken from [the LineageOS KernelSU Next kernel](https://github.com/IamKavy47/gta4xlve_kernel_ksun) by [IamKavy47](https://github.com/IamKavy47)
 
 > [!NOTE]
 > Feel free to FORK or create PR.
