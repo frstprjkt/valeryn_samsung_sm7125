@@ -28,7 +28,7 @@
 - LineageOS GSI boot ❌ (hangs on splash screen)
 - PixelOS GSI boot ✅
 - One UI 6 GSI boot ❌ (hangs on boot animation)
-- One UI 7 GSI ✅, but currently has userspace crashes
+- One UI 7 GSI boot ✅, but currently has userspace crashes
 - One UI 8 GSI boot ❌️ (restarts after 12-14 secs)
 
 ### About this Repository:
