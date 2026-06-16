@@ -21,6 +21,7 @@
 - Maybe more in future
 
 ### Progress (Disclaimer: Kernel is most likely not the issue here)
+    [✅️ = Boots | ❌️ = Doesn't boot]
 - LineageOS boot ✅️
 - Stock boot ✅
 - TrebleDroid GSI boot ✅
