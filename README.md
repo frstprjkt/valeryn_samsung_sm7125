@@ -14,7 +14,8 @@
 
 ### Features [To be added/Implemented] 
     [✅️ = Done | ❌️ = Not done yet]
-- Bootable with OneUI7/8 ❌️
+- Bootable with OneUI7 ✅
+- Bootable with OneUI8+ ❌️
 - Upstreamed to 4.14.356 ✅️
 - KernelSU ❌️
 - Maybe more in future
@@ -26,7 +27,8 @@
 - LineageOS GSI boot ❌ (hangs on splash screen)
 - PixelOS GSI boot ✅
 - One UI 6 GSI boot ❌ (hangs on boot animation)
-- One UI 7/8 GSI boot ❌️ (restarts after 12-14 secs)
+- One UI 7 GSI ✅, but currently has userspace crashes
+- One UI 8 GSI boot ❌️ (restarts after 12-14 secs)
 
 ### About this Repository:
 - This kernel was compiled in late May 2026 from the kernel source used in the One UI 8 port for the Galaxy A52 4G (SM-A525F), using a defconfig containing entries for P613 drivers. Thus, theoretically, this kernel should boot One UI 8 on the tablet, but a proper port has not yet been done.
