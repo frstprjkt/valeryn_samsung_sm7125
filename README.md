@@ -30,7 +30,7 @@
 - One UI 6 GSI boot ❌ (hangs on boot animation)
 - One UI 7 GSI boot ✅, but currently has userspace crashes when connected to WiFi
 - One UI 8 GSI boot ❌️ (restarts after 12-14 secs)
-- One UI 8.5 ROM port boot ✅, but negative amount of internal storage is shown, caused by /data/media/0 not getting mounted, ehich in turn doesn't allow for regular files like pictures or documents to be saved into it
+- One UI 8.5 ROM port boot ✅, but negative amount of internal storage is shown, caused by /data/media/0 not getting mounted, which in turn doesn't allow for regular files like pictures or documents to be saved into it
 
 ### About this Repository:
-- This kernel was compiled in late May 2026 from the kernel source used in the One UI 8 port for the Galaxy A52 4G (SM-A525F), using a defconfig containing entries for P613 drivers. It is also capable of booting OneUI 8.5 on it.
+- This kernel was compiled in late May 2026 from the kernel source used in the One UI 8 port for the Galaxy A52 4G (SM-A525F), using a defconfig containing entries for P613 drivers. It has also been proven capable of booting OneUI 8.5, albeit with critical issues most likely related to the ROM itself.
